@@ -35,23 +35,66 @@ impl GameMaster {
     }
     
     fn inc_diagonal_4(&self, player: PlayerNb, pos:Position) -> bool {
-        unimplemented!();
+        let mut count = 0;
+        let mut row = pos.y;
+        let mut col = pos.x;
+        let delta = if col < ROW - 1 - row { col } else { ROW - 1 - row };
+
+        row += delta;
+        col -= delta;
+        loop {
+            if let Some(p) = self.grid[row][col] {
+                if p == player { count += 1; } else { count = 0; }
+            }
+            else {
+                count = 0;
+            }
+            if count == 4 {
+                return true;
+            }
+            if row == 0 || col == COL - 1 {
+                break;
+            }
+            col += 1;
+            row -= 1;
+        }
+        false
     }
 
-    fn inc_diaginal_4(&self, player: PlayerNb, pos:Position) -> bool {
-        unimplemented!();
+    fn dec_diagonal_4(&self, player: PlayerNb, pos:Position) -> bool {
+        let mut count = 0;
+        let mut row = pos.y;
+        let mut col = pos.x;
+        let delta = if row < col { row } else { col };
+
+        row -= delta;
+        col -= delta;
+        loop {
+            if let Some(p) = self.grid[row][col] {
+                if p == player { count += 1; } else { count = 0; }
+            }
+            else {
+                count = 0;
+            }
+            if count == 4 {
+                return true;
+            }
+            if col == COL - 1 || row == ROW - 1 {
+                break;
+            }
+            col += 1;
+            row += 1;
+        }
+        false
     }
 
     fn horizontal_4(&self, player: PlayerNb, row: usize) -> bool {
         let mut count: usize = 0;
         let mut col: usize = 0;
 
-        while (col < COL) {
+        while col < COL {
             if let Some(p) = self.grid[row][col] {
-                match p {
-                    player => count += 1,
-                    _ => count = 0
-                }
+                if p == player { count += 1; } else { count = 0; }
             }
             else {
                 count = 0;
@@ -68,12 +111,9 @@ impl GameMaster {
         let mut count: usize = 0;
         let mut row: usize = 0;
 
-        while (row < ROW) {
+        while row < ROW {
             if let Some(p) = self.grid[row][col] {
-                match p {
-                    player => count += 1,
-                    _ => count = 0
-                }
+                if p == player { count += 1; } else { count = 0; }
             }
             else {
                 count = 0;
@@ -87,15 +127,12 @@ impl GameMaster {
     }
 
     fn check_success(&self, pos: Position) -> bool {
-        let player = self.grid[pos.x][pos.y].unwrap();
-        let row = pos.x;
-        let col = pos.y;
-        self.vertical_4(self.turn, col) || self.horizontal_4(self.turn, row) 
-        //|| inc_diagonal_4(self.turn, pos) || dec_diagonal_4(self.turn, pos)
+        self.vertical_4(self.turn, pos.x) || self.horizontal_4(self.turn, pos.y) 
+        || self.dec_diagonal_4(self.turn, pos) || self.inc_diagonal_4(self.turn, pos)
     }
 
     fn check_column(&self, input: String) -> Result<Position, ColError> {
-        let mut res = input.parse();
+        let res = input.parse();
         let col: usize;
         match res {
             Ok(nb) => col = nb,
@@ -105,9 +142,9 @@ impl GameMaster {
             return Err(ColError::WrongColNb(col))
         }
         let mut row = ROW - 1;
-        while row >= 0 {
+        loop {
             if self.grid[row][col - 1].is_none() {
-                return Ok(Position {x: row, y: col - 1});
+                return Ok(Position {x: col - 1, y: row});
             }
             if row == 0 {
                 break;
@@ -122,7 +159,7 @@ impl GameMaster {
     }
 
     fn fill_grid(&mut self, player: PlayerNb, pos: Position) {
-        self.grid[pos.x][pos.y] = Some(player);
+        self.grid[pos.y][pos.x] = Some(player);
     }
 
     fn display_grid(&self) {
@@ -147,10 +184,7 @@ impl GameMaster {
         loop {
             game_master.display_grid();
             /* add a condition in case we are in solo mode and it's computer turn */ 
-            println!("P{}, it's your turn.\nPlease choose a column.\n",
-                     match game_master.turn {
-                         PlayerNb::P1 => 1,
-                         PlayerNb::P2 => 2 });
+            println!("{:?}, it's your turn.\nPlease choose a column.\n", game_master.turn);
             io::stdout().flush()?;
             let pos: Position;
             loop {
@@ -165,9 +199,7 @@ impl GameMaster {
             game_master.nb_turn += 1;
             if game_master.check_success(pos) {
                 game_master.display_grid();
-                println!("Congrats p{}, you won !\n", match game_master.turn {
-                         PlayerNb::P1 => 1,
-                         PlayerNb::P2 => 2 });
+                println!("Congrats {:?}, you won !\n", game_master.turn);
                 return Ok(());
             }
             if game_master.check_full() {

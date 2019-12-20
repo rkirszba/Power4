@@ -9,7 +9,7 @@ pub enum Mode {
     Multi
 }
 
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum PlayerNb {
     P1,
     P2
