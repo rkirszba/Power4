@@ -178,22 +178,37 @@ impl GameMaster {
         println!("");
     }
 
+    fn process_computer_turn(&self) -> Position {
+        unimplemented!();
+    }
+
+    fn process_user_turn(&self) -> Result <Position, Box<dyn Error>> {
+        println!("{:?}, it's your turn.\nPlease choose a column.\n", self.turn);
+        io::stdout().flush()?;
+        let pos: Position;
+        loop {
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            match self.check_column(input[..].trim().to_string()) {
+                Err(e) => println!("{}\nPlease try again.\n", e),
+                Ok(p) => { pos = p; break}
+            }
+        }
+        Ok(pos)
+    }
+
     pub fn run(config: Config) -> Result <(), Box<dyn Error>> {
         let mut game_master = GameMaster::new(config);
         println!("\nHere the game begins !\n");
         loop {
             game_master.display_grid();
-            /* add a condition in case we are in solo mode and it's computer turn */ 
-            println!("{:?}, it's your turn.\nPlease choose a column.\n", game_master.turn);
-            io::stdout().flush()?;
             let pos: Position;
-            loop {
-                let mut input = String::new();
-                io::stdin().read_line(&mut input)?;
-                match game_master.check_column(input[..].trim().to_string()) {
-                    Err(e) => println!("{}\nPlease try again.\n", e),
-                    Ok(p) => { pos = p; break}
-                }
+            if (game_master.turn == PlayerNb::P1 && game_master.p1.kind == PlayerKind::Computer)
+                || (game_master.turn == PlayerNb::P2 && game_master.p2.kind == PlayerKind::Computer) {
+                pos = game_master.process_computer_turn();
+            }
+            else {
+                pos = game_master.process_user_turn()?;
             }
             game_master.fill_grid(game_master.turn, pos);
             game_master.nb_turn += 1;
