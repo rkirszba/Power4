@@ -3,6 +3,7 @@ use std::fmt;
 use std::io;
 use std::io::Write;
 use crate::game_config::{Config, Player, PlayerNb, PlayerKind};
+use std::convert::TryInto;
 
 const COL: usize = 7;
 const ROW: usize = 6;
@@ -11,7 +12,7 @@ const NB_TURNS: usize = COL * ROW;
 #[derive(Clone, PartialEq, Copy)]
 pub struct Position {
     x: usize,
-    y: usize
+    y: usize,
 }
 
 pub struct GameMaster {
@@ -33,102 +34,21 @@ impl GameMaster {
             nb_turn: 0
         }
     }
-    
-    fn inc_diagonal_4(&self, player: PlayerNb, pos:Position) -> bool {
-        let mut count = 0;
-        let mut row = pos.y;
-        let mut col = pos.x;
-        let delta = if col < ROW - 1 - row { col } else { ROW - 1 - row };
-
-        row += delta;
-        col -= delta;
-        loop {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            if row == 0 || col == COL - 1 {
-                break;
-            }
-            col += 1;
-            row -= 1;
-        }
-        false
-    }
-
-    fn dec_diagonal_4(&self, player: PlayerNb, pos:Position) -> bool {
-        let mut count = 0;
-        let mut row = pos.y;
-        let mut col = pos.x;
-        let delta = if row < col { row } else { col };
-
-        row -= delta;
-        col -= delta;
-        loop {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            if col == COL - 1 || row == ROW - 1 {
-                break;
-            }
-            col += 1;
-            row += 1;
-        }
-        false
-    }
-
-    fn horizontal_4(&self, player: PlayerNb, row: usize) -> bool {
-        let mut count: usize = 0;
-        let mut col: usize = 0;
-
-        while col < COL {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            col += 1;
-        }
-        false
-    }
-
-    fn vertical_4(&self, player: PlayerNb, col: usize) -> bool {
-        let mut count: usize = 0;
-        let mut row: usize = 0;
-
-        while row < ROW {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            row += 1;
-        }
-        false
-    }
 
     fn check_success(&self, pos: Position) -> bool {
-        self.vertical_4(self.turn, pos.x) || self.horizontal_4(self.turn, pos.y) 
-        || self.dec_diagonal_4(self.turn, pos) || self.inc_diagonal_4(self.turn, pos)
+        let Position { x, y } = pos;
+        // 4 directions: horizontal, vertical, diagonal 1 and diagonal 2
+        let directions: [(i32, i32); 4] = [(1, 0), (0, 1), (1, 1), (1, -1)];
+        directions.iter().any(|&(dx, dy)|
+            (0..4).any(|start| // All the possible indices at which the 4 consecutive pieces can start
+                (0..4).map(|i| { // Check that all the four belong to the current player
+                    let col: usize = (x as i32 + (i - start) * dx).try_into().ok()?;
+                    let row: usize = (y as i32 + (i - start) * dy).try_into().ok()?;
+                    let line = self.grid.get(row)?;
+                    *line.get(col)?
+                }).all(|v| v == Some(self.turn))
+            )
+        )
     }
 
     fn check_column(&self, input: String) -> Result<Position, ColError> {
