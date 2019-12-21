@@ -152,9 +152,9 @@ impl fmt::Display for ColError {
                 write!(f, "\"{}\" is an invalid proposition.", (s)),
             ColError::WrongColNb(nb) =>
                 write!(f, "{} is not a correct column number.\n\
-                    You should choose a number between 1 and 8 (included).", nb),
+                    You should choose a number between 1 and {} (included).", nb, COL),
             ColError::FullCol(nb) =>
-                write!(f, "Column {} is full. You have to choose another one.", nb)
+                write!(f, "Column {} is full. You have to choose another one.", nb + 1)
         }
     }
 }
