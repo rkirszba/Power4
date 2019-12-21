@@ -16,7 +16,7 @@ pub struct Position {
 }
 
 pub struct GameMaster {
-    grid: Vec<Vec<Option<PlayerNb>>>,
+    grid: [[Option<PlayerNb>; COL]; ROW],
     p1: Player,
     p2: Player,
     turn: PlayerNb,
@@ -27,7 +27,7 @@ impl GameMaster {
 
     pub fn new(config: Config) -> Self {
         GameMaster {
-            grid: vec![vec![None; COL]; ROW],
+            grid: [[None; COL]; ROW],
             p1: config.p1,
             p2: config.p2,
             turn: PlayerNb::P1,
@@ -176,15 +176,15 @@ mod tests {
     const B: Option<PlayerNb> = Some(P2);
     const O: Option<PlayerNb> = None;
 
-    fn assert_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+    fn assert_success_3_2(grid: [[Option<PlayerNb>; COL]; ROW]) {
         assert_eq!(true, make_grid(grid).check_success(Position { x: 3, y: 2 }));
     }
 
-    fn assert_no_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+    fn assert_no_success_3_2(grid: [[Option<PlayerNb>; COL]; ROW]) {
         assert_eq!(false, make_grid(grid).check_success(Position { x: 3, y: 2 }));
     }
 
-    fn make_grid(grid: Vec<Vec<Option<PlayerNb>>>) -> GameMaster {
+    fn make_grid(grid: [[Option<PlayerNb>; COL]; ROW]) -> GameMaster {
         assert_eq!(grid.len(), ROW);
         assert_eq!(grid[0].len(), COL);
         GameMaster {
@@ -198,109 +198,109 @@ mod tests {
 
     #[test]
     fn test_check_empty_grid() {
-        assert_no_success_3_2(vec![
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
+        assert_no_success_3_2([
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_vertical() {
-        assert_success_3_2(vec![
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
+        assert_success_3_2([
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_vertical_top() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, O, O, B, O, O, O],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, O, O, B, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_no_success_vertical_non_continuous() {
-        assert_no_success_3_2(vec![
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
+        assert_no_success_3_2([
+            [O, O, O, O, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_horizontal() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, A, A, A, A, O, O],
-            vec![O, B, B, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, A, A, A, A, O, O],
+            [O, B, B, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
     }
 
     #[test]
     fn test_check_no_success_horizontal_missing() {
-        assert_no_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, B, B, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        assert_no_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, B, A, A, A, O, O],
+            [O, B, B, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_diagonal1() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, B, B, A, A, O, O],
-            vec![O, A, B, B, B, A, O],
-            vec![O, B, B, B, A, A, A],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, B, A, A, A, O, O],
+            [O, B, B, A, A, O, O],
+            [O, A, B, B, B, A, O],
+            [O, B, B, B, A, A, A],
         ]);
     }
 
     #[test]
     fn test_check_success_diagonal2() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, A, O, O],
-            vec![O, B, O, A, A, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, A, O, O],
+            [O, B, O, A, A, O, O],
+            [O, B, A, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
     }
 
     #[test]
     fn test_check_column() {
-        let grid = make_grid(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, A, O, O],
-            vec![O, O, O, A, A, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        let grid = make_grid([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, A, O, O],
+            [O, O, O, A, A, O, O],
+            [O, B, A, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
         assert_eq!(
             Ok(Position { x: 1, y: 2 }),
