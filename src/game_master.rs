@@ -9,14 +9,14 @@ const COL: usize = 7;
 const ROW: usize = 6;
 const NB_TURNS: usize = COL * ROW;
 
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 pub struct Position {
     x: usize,
     y: usize,
 }
 
 pub struct GameMaster {
-    grid: Vec<Vec<Option<PlayerNb>>>,
+    grid: [[Option<PlayerNb>; COL]; ROW],
     p1: Player,
     p2: Player,
     turn: PlayerNb,
@@ -27,7 +27,7 @@ impl GameMaster {
 
     pub fn new(config: Config) -> Self {
         GameMaster {
-            grid: vec![vec![None; COL]; ROW],
+            grid: [[None; COL]; ROW],
             p1: config.p1,
             p2: config.p2,
             turn: PlayerNb::P1,
@@ -51,26 +51,16 @@ impl GameMaster {
     }
 
     fn check_column(&self, input: String) -> Result<Position, ColError> {
-        let res = input.parse();
-        let col: usize;
-        match res {
-            Ok(nb) => col = nb,
-            _ => return Err(ColError::Invalid(input))
-        }
-        if col < 1 || col > 8 {
-            return Err(ColError::WrongColNb(col))
-        }
-        let mut row = ROW - 1;
-        loop {
-            if self.grid[row][col - 1].is_none() {
-                return Ok(Position {x: col - 1, y: row});
-            }
-            if row == 0 {
-                break;
-            }
-            row -= 1;
-        }
-        Err(ColError::FullCol(col))
+        let x = match input.parse() {
+            Ok(i) if 1 <= i && i <= 7 => Ok(i - 1),
+            Ok(i) => Err(ColError::WrongColNb(i)),
+            Err(_) => Err(ColError::Invalid(input)),
+        }?;
+        (0..ROW).rev()
+            .flat_map(|y| // Create an iterator of free positions
+                if self.grid[y][x].is_none() { Some(Position { x, y }) } else { None }
+            ).next() // Take the first free position
+            .ok_or(ColError::FullCol(x)) // Return an error if there were no free positions
     }
 
     fn check_full(&self) -> bool {
@@ -89,12 +79,12 @@ impl GameMaster {
             for val in row.iter() {
                 match val {
                     None => print!("   |"),
-                    Some(p) => print!(" {} |", if *p == PlayerNb::P1 {"O"} else {"X"})
+                    Some(p) => print!(" {} |", if *p == PlayerNb::P1 { "O" } else { "X" })
                 }
             }
             println!("\n|---+---+---+---+---+---+---|");
         }
-        println!("");
+        println!();
     }
 
     fn process_computer_turn(&self) -> Position {
@@ -121,14 +111,13 @@ impl GameMaster {
         println!("\nHere the game begins !\n");
         loop {
             game_master.display_grid();
-            let pos: Position;
-            if (game_master.turn == PlayerNb::P1 && game_master.p1.kind == PlayerKind::Computer)
-                || (game_master.turn == PlayerNb::P2 && game_master.p2.kind == PlayerKind::Computer) {
-                pos = game_master.process_computer_turn();
-            }
-            else {
-                pos = game_master.process_user_turn()?;
-            }
+            let pos: Position = if
+            (game_master.turn == PlayerNb::P1 && game_master.p1.kind == PlayerKind::Computer) ||
+                (game_master.turn == PlayerNb::P2 && game_master.p2.kind == PlayerKind::Computer) {
+                game_master.process_computer_turn()
+            } else {
+                game_master.process_user_turn()?
+            };
             game_master.fill_grid(game_master.turn, pos);
             game_master.nb_turn += 1;
             if game_master.check_success(pos) {
@@ -149,6 +138,7 @@ impl GameMaster {
     }
 }
 
+#[derive(Eq, PartialEq)]
 pub enum ColError {
     Invalid(String),
     WrongColNb(usize),
@@ -162,9 +152,9 @@ impl fmt::Display for ColError {
                 write!(f, "\"{}\" is an invalid proposition.", (s)),
             ColError::WrongColNb(nb) =>
                 write!(f, "{} is not a correct column number.\n\
-                    You should choose a number between 1 and 8 (included).", nb),
+                    You should choose a number between 1 and {} (included).", nb, COL),
             ColError::FullCol(nb) =>
-                write!(f, "Column {} is full. You have to choose another one.", nb)
+                write!(f, "Column {} is full. You have to choose another one.", nb + 1)
         }
     }
 }
@@ -186,15 +176,15 @@ mod tests {
     const B: Option<PlayerNb> = Some(P2);
     const O: Option<PlayerNb> = None;
 
-    fn assert_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+    fn assert_success_3_2(grid: [[Option<PlayerNb>; COL]; ROW]) {
         assert_eq!(true, make_grid(grid).check_success(Position { x: 3, y: 2 }));
     }
 
-    fn assert_no_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+    fn assert_no_success_3_2(grid: [[Option<PlayerNb>; COL]; ROW]) {
         assert_eq!(false, make_grid(grid).check_success(Position { x: 3, y: 2 }));
     }
 
-    fn make_grid(grid: Vec<Vec<Option<PlayerNb>>>) -> GameMaster {
+    fn make_grid(grid: [[Option<PlayerNb>; COL]; ROW]) -> GameMaster {
         assert_eq!(grid.len(), ROW);
         assert_eq!(grid[0].len(), COL);
         GameMaster {
@@ -208,97 +198,113 @@ mod tests {
 
     #[test]
     fn test_check_empty_grid() {
-        assert_no_success_3_2(vec![
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
+        assert_no_success_3_2([
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_vertical() {
-        assert_success_3_2(vec![
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
+        assert_success_3_2([
+            [O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_vertical_top() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, O, O, B, O, O, O],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, O, O, B, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_no_success_vertical_non_continuous() {
-        assert_no_success_3_2(vec![
-            vec![O, O, O, O, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, A, O, O, O],
+        assert_no_success_3_2([
+            [O, O, O, O, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
+            [O, O, O, A, O, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_horizontal() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, A, A, A, A, O, O],
-            vec![O, B, B, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, A, A, A, A, O, O],
+            [O, B, B, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
     }
 
     #[test]
     fn test_check_no_success_horizontal_missing() {
-        assert_no_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, B, B, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        assert_no_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, B, A, A, A, O, O],
+            [O, B, B, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
     }
 
     #[test]
     fn test_check_success_diagonal1() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, O, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, B, B, A, A, O, O],
-            vec![O, A, B, B, B, A, O],
-            vec![O, B, B, B, A, A, A],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, O, O, O],
+            [O, B, A, A, A, O, O],
+            [O, B, B, A, A, O, O],
+            [O, A, B, B, B, A, O],
+            [O, B, B, B, A, A, A],
         ]);
     }
 
     #[test]
     fn test_check_success_diagonal2() {
-        assert_success_3_2(vec![
-            vec![O, O, O, A, O, O, O],
-            vec![O, O, O, B, A, O, O],
-            vec![O, B, O, A, A, O, O],
-            vec![O, B, A, A, A, O, O],
-            vec![O, A, B, B, B, O, O],
-            vec![O, B, B, B, A, O, O],
+        assert_success_3_2([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, A, O, O],
+            [O, B, O, A, A, O, O],
+            [O, B, A, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
         ]);
+    }
+
+    #[test]
+    fn test_check_column() {
+        let grid = make_grid([
+            [O, O, O, A, O, O, O],
+            [O, O, O, B, A, O, O],
+            [O, O, O, A, A, O, O],
+            [O, B, A, A, A, O, O],
+            [O, A, B, B, B, O, O],
+            [O, B, B, B, A, O, O],
+        ]);
+        assert_eq!(
+            Ok(Position { x: 1, y: 2 }),
+            grid.check_column("2".into())
+        );
     }
 }
