@@ -9,7 +9,7 @@ const COL: usize = 7;
 const ROW: usize = 6;
 const NB_TURNS: usize = COL * ROW;
 
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 pub struct Position {
     x: usize,
     y: usize,
@@ -51,26 +51,16 @@ impl GameMaster {
     }
 
     fn check_column(&self, input: String) -> Result<Position, ColError> {
-        let res = input.parse();
-        let col: usize;
-        match res {
-            Ok(nb) => col = nb,
-            _ => return Err(ColError::Invalid(input))
-        }
-        if col < 1 || col > 8 {
-            return Err(ColError::WrongColNb(col))
-        }
-        let mut row = ROW - 1;
-        loop {
-            if self.grid[row][col - 1].is_none() {
-                return Ok(Position {x: col - 1, y: row});
-            }
-            if row == 0 {
-                break;
-            }
-            row -= 1;
-        }
-        Err(ColError::FullCol(col))
+        let x = match input.parse() {
+            Ok(i) if 1 <= i && i <= 7 => Ok(i - 1),
+            Ok(i) => Err(ColError::WrongColNb(i)),
+            Err(_) => Err(ColError::Invalid(input)),
+        }?;
+        (0..ROW).rev()
+            .flat_map(|y| // Create an iterator of free positions
+                if self.grid[y][x].is_none() { Some(Position { x, y }) } else { None }
+            ).next() // Take the first free position
+            .ok_or(ColError::FullCol(x)) // Return an error if there were no free positions
     }
 
     fn check_full(&self) -> bool {
@@ -148,6 +138,7 @@ impl GameMaster {
     }
 }
 
+#[derive(Eq, PartialEq)]
 pub enum ColError {
     Invalid(String),
     WrongColNb(usize),
@@ -299,5 +290,21 @@ mod tests {
             vec![O, A, B, B, B, O, O],
             vec![O, B, B, B, A, O, O],
         ]);
+    }
+
+    #[test]
+    fn test_check_column() {
+        let grid = make_grid(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, A, O, O],
+            vec![O, O, O, A, A, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+        assert_eq!(
+            Ok(Position { x: 1, y: 2 }),
+            grid.check_column("2".into())
+        );
     }
 }
