@@ -44,8 +44,7 @@ impl GameMaster {
                 (0..4).map(|i| { // Check that all the four belong to the current player
                     let col: usize = (x as i32 + (i - start) * dx).try_into().ok()?;
                     let row: usize = (y as i32 + (i - start) * dy).try_into().ok()?;
-                    let line = self.grid.get(row)?;
-                    *line.get(col)?
+                    *self.grid.get(row)?.get(col)?
                 }).all(|v| v == Some(self.turn))
             )
         )
