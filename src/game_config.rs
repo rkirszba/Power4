@@ -46,7 +46,10 @@ impl Config {
         match input.to_lowercase().trim() {
             "s" => Ok(Mode::Solo),
             "m" => Ok(Mode::Multi),
-            _ => { println!("\"{}\" is an invalid input. Please try again.\n", input.trim()); return Self::mode() }
+            _ => {
+                println!("\"{}\" is an invalid input. Please try again.\n", input.trim());
+                Self::mode()
+            }
         }
     }
     
@@ -61,14 +64,26 @@ impl Config {
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
         match input.trim() {
-            "1" => { p2.kind = PlayerKind::Computer; Ok((p1, p2)) }, 
-            "2" => { p1.kind = PlayerKind::Computer; Ok((p1, p2)) },
-            _ => { println!("\"{}\" is an invalid input. Please try again.\n", input.trim()); return Self::players_solo_mode() }
+            "1" => {
+                p2.kind = PlayerKind::Computer;
+                Ok((p1, p2))
+            },
+            "2" => {
+                p1.kind = PlayerKind::Computer;
+                Ok((p1, p2))
+            },
+            _ => {
+                println!("\"{}\" is an invalid input. Please try again.\n", input.trim());
+                Self::players_solo_mode()
+            }
         }
     }
 
     fn players_multi_mode() -> (Player, Player) {
-        ((Player{nb: PlayerNb::P1, kind: PlayerKind::User}, Player{nb: PlayerNb::P2, kind: PlayerKind::User}))
+        (
+            Player { nb: PlayerNb::P1, kind: PlayerKind::User },
+            Player { nb: PlayerNb::P2, kind: PlayerKind::User }
+        )
     }
 
     pub fn run() -> Result<Self, Box<dyn Error>> {

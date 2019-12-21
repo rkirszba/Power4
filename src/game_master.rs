@@ -89,12 +89,12 @@ impl GameMaster {
             for val in row.iter() {
                 match val {
                     None => print!("   |"),
-                    Some(p) => print!(" {} |", if *p == PlayerNb::P1 {"O"} else {"X"})
+                    Some(p) => print!(" {} |", if *p == PlayerNb::P1 { "O" } else { "X" })
                 }
             }
             println!("\n|---+---+---+---+---+---+---|");
         }
-        println!("");
+        println!();
     }
 
     fn process_computer_turn(&self) -> Position {
@@ -121,14 +121,13 @@ impl GameMaster {
         println!("\nHere the game begins !\n");
         loop {
             game_master.display_grid();
-            let pos: Position;
-            if (game_master.turn == PlayerNb::P1 && game_master.p1.kind == PlayerKind::Computer)
-                || (game_master.turn == PlayerNb::P2 && game_master.p2.kind == PlayerKind::Computer) {
-                pos = game_master.process_computer_turn();
-            }
-            else {
-                pos = game_master.process_user_turn()?;
-            }
+            let pos: Position = if
+            (game_master.turn == PlayerNb::P1 && game_master.p1.kind == PlayerKind::Computer) ||
+                (game_master.turn == PlayerNb::P2 && game_master.p2.kind == PlayerKind::Computer) {
+                game_master.process_computer_turn()
+            } else {
+                game_master.process_user_turn()?
+            };
             game_master.fill_grid(game_master.turn, pos);
             game_master.nb_turn += 1;
             if game_master.check_success(pos) {
