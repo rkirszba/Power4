@@ -3,6 +3,7 @@ use std::fmt;
 use std::io;
 use std::io::Write;
 use crate::game_config::{Config, Player, PlayerNb, PlayerKind};
+use std::convert::TryInto;
 
 const COL: usize = 7;
 const ROW: usize = 6;
@@ -11,7 +12,7 @@ const NB_TURNS: usize = COL * ROW;
 #[derive(Clone, PartialEq, Copy)]
 pub struct Position {
     x: usize,
-    y: usize
+    y: usize,
 }
 
 pub struct GameMaster {
@@ -33,102 +34,20 @@ impl GameMaster {
             nb_turn: 0
         }
     }
-    
-    fn inc_diagonal_4(&self, player: PlayerNb, pos:Position) -> bool {
-        let mut count = 0;
-        let mut row = pos.y;
-        let mut col = pos.x;
-        let delta = if col < ROW - 1 - row { col } else { ROW - 1 - row };
-
-        row += delta;
-        col -= delta;
-        loop {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            if row == 0 || col == COL - 1 {
-                break;
-            }
-            col += 1;
-            row -= 1;
-        }
-        false
-    }
-
-    fn dec_diagonal_4(&self, player: PlayerNb, pos:Position) -> bool {
-        let mut count = 0;
-        let mut row = pos.y;
-        let mut col = pos.x;
-        let delta = if row < col { row } else { col };
-
-        row -= delta;
-        col -= delta;
-        loop {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            if col == COL - 1 || row == ROW - 1 {
-                break;
-            }
-            col += 1;
-            row += 1;
-        }
-        false
-    }
-
-    fn horizontal_4(&self, player: PlayerNb, row: usize) -> bool {
-        let mut count: usize = 0;
-        let mut col: usize = 0;
-
-        while col < COL {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            col += 1;
-        }
-        false
-    }
-
-    fn vertical_4(&self, player: PlayerNb, col: usize) -> bool {
-        let mut count: usize = 0;
-        let mut row: usize = 0;
-
-        while row < ROW {
-            if let Some(p) = self.grid[row][col] {
-                if p == player { count += 1; } else { count = 0; }
-            }
-            else {
-                count = 0;
-            }
-            if count == 4 {
-                return true;
-            }
-            row += 1;
-        }
-        false
-    }
 
     fn check_success(&self, pos: Position) -> bool {
-        self.vertical_4(self.turn, pos.x) || self.horizontal_4(self.turn, pos.y) 
-        || self.dec_diagonal_4(self.turn, pos) || self.inc_diagonal_4(self.turn, pos)
+        let Position { x, y } = pos;
+        // 4 directions: horizontal, vertical, diagonal 1 and diagonal 2
+        let directions: [(i32, i32); 4] = [(1, 0), (0, 1), (1, 1), (1, -1)];
+        directions.iter().any(|&(dx, dy)|
+            (0..4).any(|start| // All the possible indices at which the 4 consecutive pieces can start
+                (0..4).map(|i| { // Check that all the four belong to the current player
+                    let col: usize = (x as i32 + (i - start) * dx).try_into().ok()?;
+                    let row: usize = (y as i32 + (i - start) * dy).try_into().ok()?;
+                    *self.grid.get(row)?.get(col)?
+                }).all(|v| v == Some(self.turn))
+            )
+        )
     }
 
     fn check_column(&self, input: String) -> Result<Position, ColError> {
@@ -257,3 +176,129 @@ impl fmt::Debug for ColError {
 }
 
 impl Error for ColError {}
+
+#[cfg(test)]
+mod tests {
+    use crate::game_master::{GameMaster, ROW, COL, Position};
+    use crate::game_config::{Player, PlayerNb::{self, P1, P2}, PlayerKind};
+
+    const A: Option<PlayerNb> = Some(P1);
+    const B: Option<PlayerNb> = Some(P2);
+    const O: Option<PlayerNb> = None;
+
+    fn assert_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+        assert_eq!(true, make_grid(grid).check_success(Position { x: 3, y: 2 }));
+    }
+
+    fn assert_no_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+        assert_eq!(false, make_grid(grid).check_success(Position { x: 3, y: 2 }));
+    }
+
+    fn make_grid(grid: Vec<Vec<Option<PlayerNb>>>) -> GameMaster {
+        assert_eq!(grid.len(), ROW);
+        assert_eq!(grid[0].len(), COL);
+        GameMaster {
+            grid,
+            p1: Player { nb: P1, kind: PlayerKind::User },
+            p2: Player { nb: P2, kind: PlayerKind::User },
+            turn: P1,
+            nb_turn: 0,
+        }
+    }
+
+    #[test]
+    fn test_check_empty_grid() {
+        assert_no_success_3_2(vec![
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_vertical() {
+        assert_success_3_2(vec![
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_vertical_top() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, O, O, B, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_no_success_vertical_non_continuous() {
+        assert_no_success_3_2(vec![
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_horizontal() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, A, A, A, A, O, O],
+            vec![O, B, B, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_no_success_horizontal_missing() {
+        assert_no_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, B, B, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_diagonal1() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, B, B, A, A, O, O],
+            vec![O, A, B, B, B, A, O],
+            vec![O, B, B, B, A, A, A],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_diagonal2() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, A, O, O],
+            vec![O, B, O, A, A, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+    }
+}
