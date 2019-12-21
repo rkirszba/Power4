@@ -257,3 +257,129 @@ impl fmt::Debug for ColError {
 }
 
 impl Error for ColError {}
+
+#[cfg(test)]
+mod tests {
+    use crate::game_master::{GameMaster, ROW, COL, Position};
+    use crate::game_config::{Player, PlayerNb::{self, P1, P2}, PlayerKind};
+
+    const A: Option<PlayerNb> = Some(P1);
+    const B: Option<PlayerNb> = Some(P2);
+    const O: Option<PlayerNb> = None;
+
+    fn assert_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+        assert_eq!(true, make_grid(grid).check_success(Position { x: 3, y: 2 }));
+    }
+
+    fn assert_no_success_3_2(grid: Vec<Vec<Option<PlayerNb>>>) {
+        assert_eq!(false, make_grid(grid).check_success(Position { x: 3, y: 2 }));
+    }
+
+    fn make_grid(grid: Vec<Vec<Option<PlayerNb>>>) -> GameMaster {
+        assert_eq!(grid.len(), ROW);
+        assert_eq!(grid[0].len(), COL);
+        GameMaster {
+            grid,
+            p1: Player { nb: P1, kind: PlayerKind::User },
+            p2: Player { nb: P2, kind: PlayerKind::User },
+            turn: P1,
+            nb_turn: 0,
+        }
+    }
+
+    #[test]
+    fn test_check_empty_grid() {
+        assert_no_success_3_2(vec![
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_vertical() {
+        assert_success_3_2(vec![
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_vertical_top() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, O, O, B, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_no_success_vertical_non_continuous() {
+        assert_no_success_3_2(vec![
+            vec![O, O, O, O, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, A, O, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_horizontal() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, A, A, A, A, O, O],
+            vec![O, B, B, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_no_success_horizontal_missing() {
+        assert_no_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, B, B, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_diagonal1() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, O, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, B, B, A, A, O, O],
+            vec![O, A, B, B, B, A, O],
+            vec![O, B, B, B, A, A, A],
+        ]);
+    }
+
+    #[test]
+    fn test_check_success_diagonal2() {
+        assert_success_3_2(vec![
+            vec![O, O, O, A, O, O, O],
+            vec![O, O, O, B, A, O, O],
+            vec![O, B, O, A, A, O, O],
+            vec![O, B, A, A, A, O, O],
+            vec![O, A, B, B, B, O, O],
+            vec![O, B, B, B, A, O, O],
+        ]);
+    }
+}
